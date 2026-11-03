@@ -3,15 +3,15 @@
 # استفاده:  گیت‌بازکن [مسیر]        (پیش‌فرض: پوشهٔ جاری)
 #           گیت‌بازکن -نام مخزن [مسیر]
 set -e
-مسیر="."
-نام_مخزن=""
+target="."
+repo_name=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    -نام|--name) نام_مخزن="$2"; shift 2 ;;
-    *) مسیر="$1"; shift ;;
+    -نام|--name) repo_name="$2"; shift 2 ;;
+    *) target="$1"; shift ;;
   esac
 done
-cd "$مسیر"
+cd "$target"
 س() { printf '\033[1;36m▸ %s\033[0m\n' "$*"; }
 موفق() { printf '\033[1;32m✓ %s\033[0m\n' "$*"; }
 خطا() { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
@@ -29,22 +29,20 @@ if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null || 
   git -c commit.gpgsign=false commit -q -m "به‌روزرسانی خودکار — $(date +'%Y-%m-%d %H:%M')" || true
 fi
 
-اگر_ریموت_نیست() { ! git remote get-url origin >/dev/null 2>&1; }
-
-if اگر_ریموت_نیست; then
-  [ -n "$نام_مخزن" ] || نام_مخزن="$(basename "$(pwd)")"
-  س "ساخت مخزن گیت‌هاب با نام «$نام_مخزن»..."
-  gh repo create "$نام_مخزن" --public --source=. --remote=origin --push
+if ! git remote get-url origin >/dev/null 2>&1; then
+  [ -n "$repo_name" ] || repo_name="$(basename "$(pwd)")"
+  س "ساخت مخزن گیت‌هاب با نام «$repo_name»..."
+  gh repo create "$repo_name" --public --source=. --remote=origin --push
 else
   س "ارسال به گیت‌هاب..."
-  شاخه="$(git branch --show-current 2>/dev/null)"
-  [ -z "$شاخه" ] && شاخه=master
-  git push -u origin "$شاخه" 2>&1 | tail -5
+  branch="$(git branch --show-current 2>/dev/null)"
+  [ -z "$branch" ] && branch=master
+  git push -u origin "$branch" 2>&1 | tail -5
 fi
 
-آدرس="$(gh repo view --json url -q .url 2>/dev/null)"
-[ -z "$آدرس" ] && خطا "نشانی مخزن پیدا نشد."
-موفق "منتشر شد: $آدرس"
+url="$(gh repo view --json url -q .url 2>/dev/null)"
+[ -z "$url" ] && خطا "نشانی مخزن پیدا نشد."
+موفق "منتشر شد: $url"
 
 س "باز کردن صفحه در مرورگر..."
-termux-open-url "$آدرس" 2>/dev/null || xdg-open "$آدرس" 2>/dev/null || am start -a android.intent.action.VIEW -d "$آدرس" >/dev/null 2>&1 || echo "لینک: $آدرس"
+termux-open-url "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || am start -a android.intent.action.VIEW -d "$url" >/dev/null 2>&1 || echo "لینک: $url"
